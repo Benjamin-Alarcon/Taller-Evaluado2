@@ -1,10 +1,16 @@
 import os
 from sqlalchemy import create_engine
+from sqlalchemy.engine import URL
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-DATABASE_URL = os.getenv(
-    "DATABASE_url",
-    "postgresql://postgres:mi_password_secreto@localhost:5432/mi_base_de_datos"
+
+DATABASE_URL = URL.create(
+    drivername="postgresql+psycopg",
+    username=os.getenv("POSTGRES_USER", "postgres"),
+    password=os.getenv("POSTGRES_PASSWORD", "postgres"),
+    host=os.getenv("POSTGRES_HOST", os.getenv("DB_HOST", "db")),
+    port=int(os.getenv("POSTGRES_PORT", 5432)),
+    database=os.getenv("POSTGRES_DB", "mi_base_de_datos"),
 )
 
 engine = create_engine(DATABASE_URL)

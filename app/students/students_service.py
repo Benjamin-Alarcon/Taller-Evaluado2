@@ -9,4 +9,7 @@ def get_student_by_id(db: Session, student_id: int):
     return students_repository.get_student_by_id(db, student_id)
 
 def create_student(db: Session, student: StudentCreate):
-    return students_repository.create_student(db, student)
+    db_student = students_repository.create_student(db, student)
+    db.commit()
+    db.refresh(db_student)
+    return db_student
