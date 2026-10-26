@@ -1,23 +1,40 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.shared.database import get_db
-from app.students import students_service
-from app.students.students_schemas import StudentCreate, StudentResponse
+from app.students.students_schemas import (
+    CreateStudentDto,
+    Student,
+    StudentList,
+    UpdateStudentDto,
+)
+from app.students.students_service import students_service
 
-router = APIRouter(prefix="/students", tags=["Students"])
+router = APIRouter(prefix="/api/students", tags=["Students"])
 
-@router.get("/", response_model=list[StudentResponse])
-def get_students(db: Session = Depends(get_db)):
-    return students_service.get_all_students(db)
 
-@router.post("/", response_model=StudentResponse, status_code=status.HTTP_201_CREATED)
-def create_student(student: StudentCreate, db: Session = Depends(get_db)):
-    return students_service.create_student(db, student)
+@router.get("")
+def find_all(db: Session = Depends(get_db)) -> StudentList:
+    return students_service.find_all(db)
 
-@router.get("/{student_id}", response_model=StudentResponse)
-def get_student(student_id: int, db: Session = Depends(get_db)):
-    db_student = students_service.get_student_by_id(db, student_id)
-    if not db_student:
-        raise HTTPException(status_code=404, detail="Estudiante no encontrado")
-    return db_student
+
+@router.get("/{studentId}")
+def find_by_id(studentId: str, db: Session = Depends(get_db)) -> Student:
+    return students_service.find_by_id(db, studentId)
+
+
+@router.post("", status_code=201)
+def create(body: CreateStudentDto, db: Session = Depends(get_db)) -> Student:
+    return students_service.create(db, body)
+
+
+@router.patch("/{studentId}")
+def update(
+    studentId: str, body: UpdateStudentDto, db: Session = Depends(get_db)
+) -> Student:
+    return students_service.update(db, studentId, body)
+
+
+@router.delete("/{studentId}")
+def delete(studentId: str, db: Session = Depends(get_db)) -> Student:
+    return students_service.delete(db, studentId)
