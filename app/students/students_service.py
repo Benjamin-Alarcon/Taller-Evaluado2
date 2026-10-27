@@ -3,6 +3,8 @@ from uuid import uuid4
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.pets.pets_repository import pets_repository
+from app.pets.pets_schemas import Pet
 from app.shared.datetimes import utc_now
 from app.shared.exceptions import conflict
 from app.shared.types import FieldErrors
@@ -49,10 +51,31 @@ class StudentsService:
             updatedAt=now,
         )
 
-        # Las mascotas (data.pets) se guardan en la transacción que se agrega
-        # cuando Pets ya esté migrado a la base de datos.
         try:
             saved = self.repository.save(db, student)
+
+            for pet_data in data.pets:
+                existing = pets_repository.find_by_student_and_name(
+                    db, student.id, pet_data.name
+                )
+                if existing:
+                    raise conflict({
+                        "pets": {
+                            "message": f"Ya existe una mascota llamada {pet_data.name}"
+                        }
+                    })
+
+                pet = Pet(
+                    id=str(uuid4()),
+                    studentId=student.id,
+                    name=pet_data.name,
+                    species=pet_data.species,
+                    age=pet_data.age,
+                    createdAt=now,
+                    updatedAt=now,
+                )
+                pets_repository.save(db, pet)
+
             db.commit()
             return saved
         except Exception:

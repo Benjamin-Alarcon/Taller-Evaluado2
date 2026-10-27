@@ -14,6 +14,7 @@ except ImportError:
 # Importar Base y tus modelos para que Alembic detecte los cambios
 from app.shared.database import Base
 import app.students.students_models  # Es necesario importar los modelos
+import app.pets.pets_models
 
 config = context.config
 
