@@ -1,11 +1,13 @@
 # CRUD Students & Pets (FastAPI)
 
-Proyecto FastAPI que implementa un **CRUD** para la entidad `Student` y sus `Pet`, con **almacenamiento en memoria** a través de repositorios respaldados por diccionarios. Los datos viven mientras el proceso esté corriendo.
+Proyecto FastAPI que implementa un **CRUD** para estudiantes (`Student`) y sus mascotas (`Pet`). Los datos se persisten en PostgreSQL mediante SQLAlchemy y las migraciones de esquema se gestionan con Alembic.
 
 ## Tecnologías
 
 - Python 3.13
-- FastAPI + repositorios en memoria
+- FastAPI + SQLAlchemy ORM + PostgreSQL
+- Alembic para las migraciones de base de datos
+- Docker Compose para PostgreSQL, la API y Adminer
 - HTML + JS + Tailwind CSS (frontend estático)
 
 ## Resumen funcional
@@ -44,9 +46,9 @@ La API expone operaciones CRUD completas sobre estudiantes y mascotas:
 }
 ```
 
-Si no se envía `pets` (o se envía vacío), el comportamiento es exactamente el mismo de antes.
+Si no se envía `pets` (o se envía vacío), se crea el estudiante sin mascotas.
 
-> **Punto de transacción:** este endpoint realiza varias escrituras (el estudiante y cada mascota). Con un ORM/SQL, todas deben ejecutarse dentro de una transacción: si una mascota falla (por ejemplo, por nombre duplicado), el estudiante y las mascotas anteriores no deben quedar guardados. En esta versión en memoria la implementación es secuencial y **no** hace rollback, a propósito, para que la actividad de ORM/transacciones parta de ese problema.
+**Transacción:** este endpoint crea el estudiante y sus mascotas dentro de una misma transacción. Si falla la creación de alguna mascota (por ejemplo, por nombre duplicado), se revierte la operación y no queda guardado ni el estudiante ni ninguna de sus mascotas.
 
 ### Modelo de datos
 
@@ -185,7 +187,9 @@ El cliente estático (`public/`) consume este estándar de forma uniforme:
 ## Contexto técnico
 
 - **Backend**: FastAPI
-- **Persistencia**: en memoria (repositorios respaldados por diccionarios); los datos se pierden al reiniciar
+- **Persistencia**: PostgreSQL mediante SQLAlchemy ORM
+- **Migraciones**: Alembic
+- **Contenedores**: Docker Compose, con volumen persistente para PostgreSQL
 - **Validación**: Pydantic v2
 - **Frontend**: archivos estáticos en `public/` (Alpine.js + Tailwind CSS + vanilla-sonner, vía CDN)
 - **Gestor de dependencias**: uv
@@ -193,7 +197,21 @@ El cliente estático (`public/`) consume este estándar de forma uniforme:
 
 ## Ejecución local
 
-1. Instalar dependencias:
+1. Crear el archivo local de variables de entorno a partir de la plantilla y completar sus valores. No subas `.env` al repositorio:
+
+    ```powershell
+    Copy-Item .env.example .env
+    ```
+
+   Para ejecutar Alembic desde PowerShell, configura `DATABASE_URL` con las mismas credenciales y base de datos, usando `localhost` como host y el puerto publicado. Por ejemplo, reemplaza los valores de esta línea por los de tu `.env`:
+
+    ```powershell
+    $env:DATABASE_URL = "postgresql+psycopg://USUARIO:CONTRASEÑA@localhost:5432/BASE_DE_DATOS"
+    ```
+
+   Dentro de Docker Compose, la API se conecta al servicio de base de datos usando el host `db`.
+
+2. Instalar dependencias:
 
     ```bash
     make install
@@ -205,7 +223,19 @@ El cliente estático (`public/`) consume este estándar de forma uniforme:
     uv sync
     ```
 
-2. Levantar el servidor en modo desarrollo:
+3. Levantar los servicios:
+
+    ```bash
+    docker compose up -d --build
+    ```
+
+4. Aplicar las migraciones a PostgreSQL:
+
+    ```bash
+    uv run alembic upgrade head
+    ```
+
+5. Para ejecutar la API localmente en modo desarrollo (con PostgreSQL activo en Docker):
 
     ```bash
     make dev
@@ -217,12 +247,13 @@ El cliente estático (`public/`) consume este estándar de forma uniforme:
     uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 3000
     ```
 
-La aplicación queda disponible en:
+Con Docker Compose, la API queda disponible en:
 
 - `http://localhost:3000`
-- `http://localhost:3000/docs`
+- `http://localhost:3000/docs` (Swagger)
+- `http://localhost:8080` (Adminer)
 
-> Al ser un almacenamiento en memoria, los datos se pierden cada vez que se reinicia el servidor (incluido el reload de desarrollo).
+Los datos de PostgreSQL se conservan en el volumen `postgres_data` al detener los contenedores con `docker compose down`. No uses `docker compose down -v` a menos que quieras borrar también ese volumen y sus datos.
 
 ## Comandos útiles
 
