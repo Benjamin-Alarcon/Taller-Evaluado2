@@ -1,4 +1,5 @@
 from sqlalchemy import Column, DateTime, Integer, String, UniqueConstraint
+from sqlalchemy.orm import relationship
 
 from app.shared.database import Base
 
@@ -17,3 +18,9 @@ class StudentModel(Base):
     age = Column(Integer, nullable=False)
     createdAt = Column("created_at", DateTime(timezone=True), nullable=False)
     updatedAt = Column("updated_at", DateTime(timezone=True), nullable=False)
+
+    pets = relationship(
+        "PetModel",
+        back_populates="student",
+        cascade="all, delete-orphan",
+    )
